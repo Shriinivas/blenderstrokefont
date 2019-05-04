@@ -1,6 +1,6 @@
 # Blender Add-on to Render Text Using Stroke Fonts
 This add-on allows the user to render text using stroke font. Stroke fonts have glyphs that can have open paths, so they can be used e.g. in writing animation. The add-on comes bundled with a set of 26 stroke fonts.<br>
-Supported Blender version: 2.8 beta <br>
+Supported Blender version: 2.8 beta (please make sure you have a build downloaded after April 15, 2019)<br>
 
 # Installation
 - Download addstrokefont_2_8.zip, open Blender and select File->User Preferences <br>
