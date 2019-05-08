@@ -13,7 +13,10 @@ After installation, a new 'Add Stroke Font Text' panel is displayed in 'Active T
 # Quick start
 Select 'Add Input Text' option in the 'Action' drop-down, input the text to be rendered in the text box, select the font and click 'Add Stroke Font Text'. To render text from a file choose 'Add Text from File' action. <br>
 With 'Confine Area' checkbox selected, you can choose horizontal and vertical alignment for text rendering. <br><br>
+When the <b>Clone Glyphs<b> option is selected, all glyphs pertaining to the same characters share the data block.
+![Demo](https://github.com/Shriinivas/blenderstrokefont/blob/master/cloneglyphs.gif)
 
+# Video Tutorial
 <a href=https://youtu.be/whysGoZPXt8> The introductory video</a> provides a detailed overview of the add-on functionality<br>
 There is also a <a href=https://youtu.be/IF6r7mp7IN0>demo video</a> about the various options available.<br>
 
