@@ -3,7 +3,7 @@ This add-on allows the user to render text using stroke font. Stroke fonts have 
 Supported Blender version: <b>2.8x <br></b>
 
 # Installation
-- Click on the code button above the repository list
+- Click on the Code button above the repository list
 - Select Download Zip option and save the zip file to a local folder
 - Click install Add-ons tab and then Install Add-on from File<br>
 - Select the downloaded zip file <br>
