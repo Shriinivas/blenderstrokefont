@@ -3,9 +3,10 @@ This add-on allows the user to render text using stroke font. Stroke fonts have 
 Supported Blender version: <b>2.8 <br></b>
 
 # Installation
-- Download addstrokefont_2_8.zip, open Blender and select File->User Preferences <br>
+- Click on the code button above the repository list
+- Select Download Zip option and save the zip file to a local folder
 - Click install Add-ons tab and then Install Add-on from File<br>
-- Select the downloaded file <br>
+- Select the downloaded zip file <br>
 - Check the 'Add Stroke Font Text' option in the add-ons dialog <br>
 
 After installation, a new 'Add Stroke Font Text' panel is displayed in 'Active Tool and Workspace settings' area when Blender is in object mode.<br>
