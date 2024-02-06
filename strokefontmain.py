@@ -102,7 +102,7 @@ def main(context, rectangles = None):
     except:
         params.copyPropertiesCurve = None
 
-
+    joinGlyphs = params.joinGlyphs
     cloneGlyphs = params.cloneGlyphs
     confined = params.confined
     width = params.width
@@ -115,12 +115,12 @@ def main(context, rectangles = None):
     addPlane = params.addPlane
 
     return addText(fontName, fontSize, charSpacing, wordSpacing, lineSpacing, copyPropObj, \
-        rgba, text, cloneGlyphs, action, filePath, confined, width, height, \
+        rgba, text, cloneGlyphs, joinGlyphs,action, filePath, confined, width, height, \
             margin, hAlignment, vAlignment, expandDir, expandDist, rectangles, addPlane)
 
 #Default options if called from writing animation
 def addText(fontName, fontSize, charSpacing, wordSpacing, lineSpacing, copyPropObj, rgba, \
-    text, cloneGlyphs, action = 'addInputText', filePath = None, confined = False, \
+    text, cloneGlyphs, joinGlyphs,action = 'addInputText', filePath = None, confined = False, \
         width = None, height = None, margin = None, hAlignment = None, \
             vAlignment = None, expandDir = None, expandDist  = None, \
                 rectangles = None, addPlane = None, bevelDepth = None):
@@ -129,7 +129,7 @@ def addText(fontName, fontSize, charSpacing, wordSpacing, lineSpacing, copyPropO
 
     if(bevelDepth == None): bevelDepth = 0.01 * fontSize
 
-    renderer = BlenderFontRenderer(copyPropObj, bevelDepth, cloneGlyphs, rgba)
+    renderer = BlenderFontRenderer(copyPropObj, bevelDepth, cloneGlyphs, joinGlyphs,rgba)
 
     if(action == "addGlyphTable"):
         charSpacing = 1
@@ -202,7 +202,7 @@ class BlenderCharDataFactory:
         return BlenderCharData(char, rOffset, segs, glyphName)
 
 class BlenderFontRenderer:
-    def __init__(self, copyPropObj, bevelDepth, cloneGlyphs, rgba):
+    def __init__(self, copyPropObj, bevelDepth, cloneGlyphs, joinGlyphs,rgba):
         matName = 'Flat Text Material'
         self.copyPropObj = copyPropObj
         self.collection = None
@@ -216,9 +216,14 @@ class BlenderFontRenderer:
         else:
             self.objMat = None
         self.cloneGlyphs = cloneGlyphs
+        self.joinGlyphs = joinGlyphs
         self.charObjDataCache = {}
+        
+        self.first_chars_rendered=""
 
     def renderChar(self, charData, x, y, naChar):
+        if len(self.first_chars_rendered)<20:
+            self.first_chars_rendered+=charData.char
         curveData = self.charObjDataCache.get(charData.char)
         isFlat = self.objMat != None
         curve = CPath().addCurve(charData, self.copyPropObj, \
@@ -250,10 +255,53 @@ class BlenderFontRenderer:
         if(self.objMat != None):
             self.bevelObj = createCircle(self.bevelDepth, self.collection)
         self.currCollection = self.collection
+        
+    def afterRender(self):
+        print("join glyphs:",self.joinGlyphs)
+        if self.joinGlyphs:
+            parentcollection = bpy.context.scene.collection
+            collection=self.currCollection
+            outerCollection = None
+            if self.collection != collection:
+                outerCollection=self.collection
+                
+            print("Joining")
+            curves = []
+            for x in collection.all_objects:
+                if x.type=="CURVE":
+                    curves.append(x)
+                else:
+                    print(x)
+            print(curves)
+            if len(curves)>0:
+                bpy.ops.object.select_all(action='DESELECT')
+                bpy.context.view_layer.objects.active = curves[0]
+                for x in curves:
+                    x.select_set(True)
+                bpy.ops.object.join()
+                join_obj=bpy.context.selected_objects[0]
+                top_level_objs=[]
+                for x in collection.all_objects:
+                    if x.parent is None:
+                        top_level_objs.append(x)
+                if len(top_level_objs)==1:
+                    for obj in collection.all_objects:
+                        parentcollection.objects.link(obj)
+                        collection.objects.unlink(obj)
+                    bpy.data.collections.remove(collection)
+                if self.currPlane:
+                    self.currPlane.name = self.first_chars_rendered
+                    self.currPlane.data.name = self.first_chars_rendered
+                    join_obj.name = self.first_chars_rendered+"_text"
+                    join_obj.data.name = self.first_chars_rendered+"_text"
+                else:    
+                    join_obj.name = self.first_chars_rendered
+                    join_obj.data.name = self.first_chars_rendered
+                
 
     def newBoxToBeRendered(self, box, addPlane):
-        self.currCollection = bpy.data.collections.new('StrokeFontTextBox')
-        self.collection.children.link(self.currCollection)
+#        self.currCollection = bpy.data.collections.new('StrokeFontTextBox')
+ #       self.collection.children.link(self.currCollection)
         self.z = box[0][2]
         if(addPlane):
             self.currPlane = createPlane(box[0], box[1], self.currCollection)

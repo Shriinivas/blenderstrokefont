@@ -22,6 +22,7 @@ xFontFace = 'font-face'
 xFontFamily = 'font-family'
 xCRInfo = 'metadata'
 xSize = 'units-per-em'
+xFontROff = 'horiz-adv-x'
 xSpaceROff = 'horiz-adv-x'
 xChar = 'unicode'
 xROff = 'horiz-adv-x'
@@ -29,6 +30,11 @@ xGlyph = 'glyph'
 xPath = 'd'
 xMissingGlyph = 'missing-glyph'
 xGlyphName = 'glyph-name'
+xHKern = 'hkern'
+xKernG1 = 'g1'
+xKernG2 = 'g2'
+xKernDist = 'k'
+
 
 xAscent='ascent'
 xDescent = 'descent'
@@ -67,6 +73,7 @@ class FontData:
         self.dataFilePath = dataFileDirPath + '/' + fontName + '.svg'
         self.fontName = fontName
         self.glyphMap = {}
+        self.kernMap = {}
         self.fontSize = fontSize
         self.spaceWidth = fontSize / 2
         self.crInfo = ''
@@ -93,9 +100,9 @@ class FontData:
 
             self.fontName = fontFaceElem.getAttribute(xFontFamily)
             oldFontSize = float(fontFaceElem.getAttribute(xSize))
+            scaleFact = fontSize / oldFontSize
 
             info = {}
-
             try:
                 info[xSize] = oldFontSize
                 info[xFontId] = fontElem.getAttribute(xFontId)
@@ -108,22 +115,42 @@ class FontData:
                 # ~ inkex.errormsg(str(e))
                 info = getDefaultExtraInfo(self.fontName, oldFontSize)
 
+            defaultHorizOffset = info[xSpaceROff]
+
             glyphElems = fontDefs.getElementsByTagName(xGlyph)
             for e in glyphElems:
-                char = e.getAttribute(xChar)
-                rOffset = float(e.getAttribute(xROff))
-                glyphName = e.getAttribute(xGlyphName)
-                if(glyphName == 'space'):
-                    info[xSpaceROff] = rOffset
-                else:
-                    pathStr = e.getAttribute(xPath)
-                    if(pathStr != None and pathStr.strip() != ''):
-                        charData = charDataFactory.getCharData(char, rOffset, pathStr, glyphName)
+                char = None
+                glyphName = None
+                rOffset = None
+                try:
+                    glyphName = e.getAttribute(xGlyphName)
+                    char = e.getAttribute(xChar)
+                    if e.hasAttribute(xROff):
+                        rOffset = float(e.getAttribute(xROff))
+                    else:
+                        rOffset = defaultHorizOffset
+                    if(glyphName == 'space'):
+                        info[xSpaceROff] = rOffset
+                    else:
+                        pathStr = e.getAttribute(xPath)
+                        if(pathStr != None and pathStr.strip() != ''):
+                            charData = charDataFactory.getCharData(char, rOffset, pathStr, glyphName)
+                            charData.scaleGlyph(scaleFact, -scaleFact)
+                            self.glyphMap[char] = charData
+                            
+                except ValueError:
+                    print(f"Couldn't parse glyph {char} {glyphName} {rOffset}")
 
-                        scaleFact = fontSize / oldFontSize
-                        charData.scaleGlyph(scaleFact, -scaleFact)
-
-                        self.glyphMap[char] = charData
+            kernElems = fontDefs.getElementsByTagName(xHKern)
+            for e in kernElems:
+                first = e.getAttribute(xKernG1).split(",")
+                second = e.getAttribute(xKernG2).split(",")
+                distance = float(e.getAttribute(xKernDist))
+                for fc in first:
+                    if not fc in self.kernMap:
+                        self.kernMap[fc]={}                     
+                    for sc in second:
+                        self.kernMap[fc][sc] = distance*scaleFact
 
             self.extraInfo = {}
             for key in info:
@@ -335,11 +362,21 @@ class DrawContext:
             return 0
 
         nextX = x
-
+        last_char=None
         for i, charData in enumerate(wordData):
             # Always start from bbox minX of the first letter
             if(i == 0):
                 nextX -= charData.bbox[0]
+            else:
+                # adjust for kerning
+                if charData.char in self.strokeFontData.glyphMap:
+                    this_char = self.strokeFontData.glyphMap[charData.char].glyphName
+                    if last_char is not None and last_char in self.strokeFontData.kernMap and this_char in self.strokeFontData.kernMap[last_char]:
+                        print(f"Kerning: {last_char} {this_char} {self.strokeFontData.kernMap[last_char][this_char]}")
+                        nextX -= self.strokeFontData.kernMap[last_char][this_char]*self.charSpacing
+                    last_char=this_char
+                else:
+                    last_char = None
 
             if(render):
                 naChar = self.strokeFontData.glyphMap.get(charData.char) is None
@@ -578,6 +615,8 @@ class DrawContext:
             y += self.yCoeff * self.lineHeight
 
         self.renderer.centerInView(wmax / 2, y / 2)
+        self.renderer.afterRender()
+
 
     #Remove newline chars if alignment is not none
     def preprocess(self, chars, vAlignment, isFirstLine):
@@ -630,6 +669,7 @@ class DrawContext:
                 break
 
             if(len(chars) == 0):
+                self.renderer.afterRender()
                 return
 
             self.renderer.newBoxToBeRendered(box, addPlane)
@@ -657,9 +697,11 @@ class DrawContext:
 
             if(chars is None or \
                 (lenCharsBeforeProc == len(chars) and (len(rectangles)-1) == i)):
+                self.renderer.afterRender()
                 return
 
             i += 1
+        self.renderer.afterRender()
 
     def renderGlyphTable(self):
         self.renderer.beforeRender()
@@ -709,3 +751,4 @@ class DrawContext:
         width = letterSpace * hCnt / 2
         height = y / 2
         self.renderer.centerInView(width, height)
+        self.renderer.afterRender()
