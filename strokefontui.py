@@ -15,7 +15,7 @@ from mathutils import Vector
 
 from bpy_extras.view3d_utils import region_2d_to_vector_3d, region_2d_to_location_3d
 from gpu_extras.batch import batch_for_shader
-import bgl, bpy, gpu, gpu_extras
+import bpy, gpu, gpu_extras
 
 from . strokefontmain import main, getfontNameList
 
@@ -248,7 +248,11 @@ class ModalCreateBoxOp(Operator):
     def drawHandler(self):
         if(not self.batch):
             return
-        bgl.glLineWidth(5)
+        try:
+            gpu.state.line_width_set(5.0)
+        except AttributeError:
+            import bgl
+            bgl.glLineWidth(5)
         self.batch.draw(self.shader)
 
     def execute(self, context):
