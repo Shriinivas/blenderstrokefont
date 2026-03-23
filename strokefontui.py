@@ -83,6 +83,10 @@ class AddStrokeFontTextParams(PropertyGroup):
     cloneGlyphs : BoolProperty(name="Clone Glyphs", default = True, \
         description='Common data for the same glyphs')
 
+    joinGlyphs : BoolProperty(name="Join Glyphs", default = True, \
+        description='Make text into a single curve')
+
+
     confined : BoolProperty(name="Confine Area", default = False, \
         description='Render text in confined 2d area')
 
@@ -155,6 +159,7 @@ class AddStrokeFontTextPanel(Panel):
         
         if(params.action != 'addGlyphTable'):
             col.prop(params, "cloneGlyphs")
+            col.prop(params, "joinGlyphs")
             col.prop(params, "confined")
         
             if(params.confined):            
